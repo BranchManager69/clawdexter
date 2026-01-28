@@ -10,6 +10,9 @@ import type {
 } from "../../src/plugins/types.js";
 import type { OAuthCredential } from "../../src/agents/auth-profiles/types.js";
 
+// Dexter x402 SDK for generic x402 payments
+import { wrapFetch, type WrapFetchOptions } from "@dexterai/x402/client";
+
 // =============================================================================
 // Constants
 // =============================================================================
@@ -590,19 +593,465 @@ async function loginDexter(params: {
 }
 
 // =============================================================================
+// Generic x402 Tools (No Auth Required - Config-Based Wallet)
+// =============================================================================
+
+/**
+ * Plugin configuration
+ */
+type PluginConfig = {
+  // Generic x402 payment config (no auth required)
+  svmPrivateKey?: string;
+  evmPrivateKey?: string;
+  defaultNetwork?: string;
+  maxPaymentUSDC?: string;
+  directoryUrl?: string;
+  disableTelemetry?: boolean;
+  // Dexter MCP config (requires OAuth)
+  baseUrl?: string;
+  autoRefreshTools?: boolean;
+};
+
+const DEFAULT_DIRECTORY_URL = "https://x402.dexter.cash/api/x402/directory";
+const DEXTER_TELEMETRY_URL = "https://x402.dexter.cash/api/x402/telemetry";
+
+// Network name to CAIP-2 mapping
+const NETWORK_TO_CAIP2: Record<string, string> = {
+  solana: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "solana-devnet": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+  base: "eip155:8453",
+  "base-sepolia": "eip155:84532",
+  polygon: "eip155:137",
+  arbitrum: "eip155:42161",
+  optimism: "eip155:10",
+  avalanche: "eip155:43114",
+};
+
+/**
+ * Telemetry for x402 payments (fire-and-forget)
+ */
+type TelemetryEvent = {
+  url: string;
+  method: string;
+  network?: string;
+  priceUsdc?: string;
+  statusCode?: number;
+  success: boolean;
+  responseTimeMs?: number;
+  errorText?: string;
+  source: string;
+};
+
+class DexterTelemetry {
+  private queue: TelemetryEvent[] = [];
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private enabled: boolean;
+
+  constructor(enabled: boolean = true) {
+    this.enabled = enabled;
+  }
+
+  report(event: Omit<TelemetryEvent, "source">) {
+    if (!this.enabled) return;
+    this.queue.push({ ...event, source: "moltbot-dexter" });
+    if (this.queue.length >= 10) {
+      this.flush();
+    } else if (!this.flushTimer) {
+      this.flushTimer = setTimeout(() => this.flush(), 5000);
+    }
+  }
+
+  async flush() {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    if (this.queue.length === 0) return;
+    const events = [...this.queue];
+    this.queue = [];
+    try {
+      await fetch(DEXTER_TELEMETRY_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ events }),
+      });
+    } catch {
+      // Silent fail - telemetry is best-effort
+    }
+  }
+}
+
+/**
+ * Search the Dexter x402 directory
+ */
+async function searchDirectory(
+  query?: string,
+  options?: {
+    network?: string;
+    verified?: boolean;
+    limit?: number;
+    directoryUrl?: string;
+  }
+): Promise<{
+  endpoints: Array<{
+    url: string;
+    method: string;
+    network?: string;
+    priceUsdc?: string;
+    description?: string;
+    verified: boolean;
+    successRate?: number;
+    params?: Record<string, unknown>;
+  }>;
+  total: number;
+}> {
+  const baseUrl = options?.directoryUrl || DEFAULT_DIRECTORY_URL;
+  const params = new URLSearchParams();
+  if (query) params.set("search", query);
+  if (options?.network) params.set("network", options.network);
+  if (options?.verified !== undefined) params.set("verified", String(options.verified));
+  if (options?.limit) params.set("limit", String(options.limit));
+
+  try {
+    const response = await fetch(`${baseUrl}?${params}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      throw new Error(`Directory search failed: ${response.status}`);
+    }
+    const data = (await response.json()) as {
+      endpoints?: Array<{
+        url: string;
+        method: string;
+        network?: string;
+        priceUsdc?: string;
+        description?: string;
+        verified: boolean;
+        successRate?: number;
+        params?: Record<string, unknown>;
+      }>;
+      pagination?: { total?: number };
+    };
+    return {
+      endpoints: data.endpoints || [],
+      total: data.pagination?.total || 0,
+    };
+  } catch {
+    return { endpoints: [], total: 0 };
+  }
+}
+
+/**
+ * Create x402_pay tool that uses Dexter x402 SDK
+ */
+function createX402PayTool(config: PluginConfig, telemetry: DexterTelemetry) {
+  // Create wrapped fetch with payment handling
+  let x402Fetch: typeof fetch | null = null;
+
+  const getX402Fetch = () => {
+    if (x402Fetch) return x402Fetch;
+
+    if (!config.svmPrivateKey && !config.evmPrivateKey) {
+      return null;
+    }
+
+    const wrapOptions: WrapFetchOptions = {
+      verbose: false,
+    };
+
+    if (config.svmPrivateKey) {
+      wrapOptions.walletPrivateKey = config.svmPrivateKey;
+    }
+    if (config.evmPrivateKey) {
+      wrapOptions.evmPrivateKey = config.evmPrivateKey;
+    }
+    if (config.defaultNetwork) {
+      wrapOptions.preferredNetwork = NETWORK_TO_CAIP2[config.defaultNetwork] || config.defaultNetwork;
+    }
+    if (config.maxPaymentUSDC) {
+      // Convert USDC amount to atomic units (6 decimals)
+      const [whole, fraction = ""] = config.maxPaymentUSDC.split(".");
+      const fractionPadded = (fraction + "000000").slice(0, 6);
+      wrapOptions.maxAmountAtomic = `${whole}${fractionPadded}`;
+    }
+
+    x402Fetch = wrapFetch(globalThis.fetch, wrapOptions);
+    return x402Fetch;
+  };
+
+  return {
+    name: "x402_pay",
+    label: "x402 Payment",
+    description:
+      "Call ANY x402-enabled paid API with automatic USDC payment. Supports Solana, Base, Polygon, Arbitrum, Optimism, Avalanche. Configure wallet keys in plugin settings.",
+    parameters: Type.Object({
+      url: Type.String({ description: "The x402-enabled endpoint URL to call" }),
+      method: Type.Optional(Type.String({ description: "HTTP method (default: GET)" })),
+      params: Type.Optional(Type.Unknown({ description: "Query params (GET) or JSON body (POST)" })),
+      headers: Type.Optional(Type.Unknown({ description: "Optional custom headers" })),
+    }),
+
+    async execute(_id: string, input: Record<string, unknown>) {
+      const url = input.url as string;
+      const method = ((input.method as string) || "GET").toUpperCase();
+      const startTime = Date.now();
+
+      // Check wallet configuration
+      const fetchClient = getX402Fetch();
+      if (!fetchClient) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error:
+                    "No wallet configured. Set svmPrivateKey (Solana) or evmPrivateKey (EVM) in plugin config.",
+                  configHelp: {
+                    svmPrivateKey: "Base58-encoded Solana private key",
+                    evmPrivateKey: "Hex EVM private key (with or without 0x)",
+                  },
+                },
+                null,
+                2
+              ),
+            },
+          ],
+          details: { error: "no_wallet_configured" },
+        };
+      }
+
+      try {
+        // Build request
+        let requestUrl = url;
+        let body: string | undefined;
+        const requestHeaders: Record<string, string> = {
+          Accept: "application/json",
+          "User-Agent": "moltbot-dexter-x402/2.0",
+          ...((input.headers as Record<string, string>) || {}),
+        };
+
+        if (method === "GET" && input.params && typeof input.params === "object") {
+          const urlObj = new URL(url);
+          for (const [key, value] of Object.entries(input.params as Record<string, unknown>)) {
+            if (value !== undefined && value !== null) {
+              urlObj.searchParams.set(key, String(value));
+            }
+          }
+          requestUrl = urlObj.toString();
+        } else if (input.params !== undefined && input.params !== null) {
+          body = typeof input.params === "string" ? input.params : JSON.stringify(input.params);
+          if (!requestHeaders["Content-Type"]) {
+            requestHeaders["Content-Type"] = "application/json";
+          }
+        }
+
+        // Make request with automatic payment handling
+        const response = await fetchClient(requestUrl, {
+          method,
+          headers: requestHeaders,
+          body,
+        });
+
+        // Parse response
+        const contentType = response.headers.get("content-type") || "";
+        let data: unknown;
+        if (contentType.includes("application/json")) {
+          data = await response.json().catch(() => null);
+        } else if (contentType.startsWith("text/")) {
+          data = await response.text();
+        } else {
+          data = `[Binary data: ${contentType}]`;
+        }
+
+        // Extract payment info from response headers
+        const paymentHeader = response.headers.get("PAYMENT-RESPONSE") || response.headers.get("x-payment-response");
+        let priceUsdc: string | null = null;
+        if (paymentHeader) {
+          try {
+            const payment = JSON.parse(atob(paymentHeader));
+            const rawAmount = payment.amount || payment.paidAmount || payment.value;
+            if (rawAmount) {
+              priceUsdc = (Number(rawAmount) / 1_000_000).toFixed(6);
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+
+        const success = response.ok;
+
+        // Report telemetry
+        telemetry.report({
+          url,
+          method,
+          network: config.defaultNetwork,
+          priceUsdc: priceUsdc || undefined,
+          statusCode: response.status,
+          success,
+          responseTimeMs: Date.now() - startTime,
+        });
+
+        const result = {
+          success,
+          statusCode: response.status,
+          data,
+          ...(priceUsdc ? { priceUsdc: `$${priceUsdc}` } : {}),
+          network: config.defaultNetwork || "auto",
+        };
+
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+          details: result,
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        telemetry.report({
+          url,
+          method,
+          success: false,
+          responseTimeMs: Date.now() - startTime,
+          errorText: errorMessage,
+        });
+
+        // Check for specific error types
+        if (errorMessage.includes("amount_exceeds_max")) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  {
+                    success: false,
+                    error: `Payment rejected: exceeds configured max of $${config.maxPaymentUSDC || "0.50"} USDC`,
+                    paymentBlocked: true,
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+            details: { error: errorMessage, paymentBlocked: true },
+          };
+        }
+
+        if (errorMessage.includes("insufficient_balance")) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  {
+                    success: false,
+                    error: errorMessage,
+                    help: "Fund your wallet with USDC on the appropriate network",
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+            details: { error: errorMessage },
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({ success: false, error: errorMessage }, null, 2),
+            },
+          ],
+          details: { error: errorMessage },
+        };
+      }
+    },
+  };
+}
+
+/**
+ * Create x402_search tool for discovering paid APIs
+ */
+function createX402SearchTool(config: PluginConfig) {
+  return {
+    name: "x402_search",
+    label: "x402 Search",
+    description:
+      "Search for x402-enabled paid APIs. Find endpoints by keyword, filter by network (solana/base/polygon/etc), see pricing. Directory aggregated by Dexter.",
+    parameters: Type.Object({
+      query: Type.Optional(Type.String({ description: "Search term (searches url, title, description)" })),
+      network: Type.Optional(Type.String({ description: "Filter by network: solana, base, polygon, etc." })),
+      verified: Type.Optional(Type.Boolean({ description: "Only show verified endpoints" })),
+      limit: Type.Optional(Type.Number({ description: "Max results (default: 10, max: 50)" })),
+    }),
+
+    async execute(_id: string, input: Record<string, unknown>) {
+      try {
+        const result = await searchDirectory(input.query as string | undefined, {
+          network: input.network as string | undefined,
+          verified: input.verified as boolean | undefined,
+          limit: Math.min((input.limit as number | undefined) || 10, 50),
+          directoryUrl: config.directoryUrl,
+        });
+
+        const formattedEndpoints = result.endpoints.map((ep) => ({
+          url: ep.url,
+          method: ep.method,
+          network: ep.network,
+          price: ep.priceUsdc ? `$${ep.priceUsdc} USDC` : "unknown",
+          description: ep.description || "(no description)",
+          verified: ep.verified ? "✓ verified" : "unverified",
+          successRate: ep.successRate != null ? `${ep.successRate.toFixed(1)}%` : "unknown",
+        }));
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  success: true,
+                  total: result.total,
+                  showing: formattedEndpoints.length,
+                  endpoints: formattedEndpoints,
+                  source: "Dexter x402 Directory (https://dexter.cash)",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+          details: { endpoints: formattedEndpoints, total: result.total },
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({ success: false, error: errorMessage }, null, 2),
+            },
+          ],
+          details: { error: errorMessage },
+        };
+      }
+    },
+  };
+}
+
+// =============================================================================
 // Plugin Registration
 // =============================================================================
 
 const dexterMcpPlugin = {
   id: "dexter-x402",
   name: "Dexter x402",
-  description: "Connect to Dexter's Solana DeFi tools via OAuth",
+  description: "x402 payments + Dexter DeFi tools. Generic x402_pay/x402_search for ANY paid API, plus 59+ authenticated Dexter MCP tools.",
   
   register(api: MoltbotPluginApi) {
-    const config = api.pluginConfig as {
-      baseUrl?: string;
-      autoRefreshTools?: boolean;
-    } | undefined;
+    const config = (api.pluginConfig || {}) as PluginConfig;
     
     const baseUrl = config?.baseUrl || DEFAULT_BASE_URL;
     
@@ -854,7 +1303,31 @@ const dexterMcpPlugin = {
       { name: "dexter_x402" },
     );
 
+    // ==========================================================================
+    // Generic x402 Tools (No Auth Required)
+    // ==========================================================================
+    
+    // Create telemetry instance
+    const telemetry = new DexterTelemetry(!config.disableTelemetry);
+    
+    // Register x402_pay tool (generic payment for ANY x402 endpoint)
+    const x402PayTool = createX402PayTool(config, telemetry);
+    api.registerTool(
+      () => x402PayTool,
+      { name: "x402_pay" }
+    );
+    
+    // Register x402_search tool (directory search)
+    const x402SearchTool = createX402SearchTool(config);
+    api.registerTool(
+      () => x402SearchTool,
+      { name: "x402_search" }
+    );
+
     api.logger.info("Dexter x402 plugin registered");
+    api.logger.info(`  - x402_pay: ${config.svmPrivateKey || config.evmPrivateKey ? "wallet configured" : "no wallet (config required)"}`);
+    api.logger.info(`  - x402_search: directory at ${config.directoryUrl || DEFAULT_DIRECTORY_URL}`);
+    api.logger.info(`  - dexter_x402: ${config.baseUrl || DEFAULT_BASE_URL} (OAuth required)`);
   },
 };
 

@@ -1,19 +1,56 @@
 # Dexter x402 Plugin for Moltbot
 
-Official Moltbot plugin providing access to **59+ Dexter Solana DeFi tools** via the Model Context Protocol (MCP).
+The most comprehensive x402 payment plugin for Moltbot. Provides:
+
+1. **Generic x402 Payments** (`x402_pay`) - Call ANY x402-enabled paid API with automatic USDC payment
+2. **x402 Directory Search** (`x402_search`) - Discover paid APIs across multiple networks
+3. **59+ Dexter DeFi Tools** (`dexter_x402`) - Authenticated access to Dexter's MCP tools
 
 ## Overview
 
-This plugin connects Moltbot to Dexter's MCP server, enabling:
+### Generic x402 Tools (No Auth Required)
 
-- **Secure OAuth 2.0 Authentication** with PKCE and Dynamic Client Registration
-- **Real-time Tool Discovery** via MCP `tools/list`  
-- **Direct Tool Execution** via MCP `tools/call`
-- **Automatic Token Refresh** for seamless long-running sessions
+Configure your wallet keys and start making paid API calls immediately:
+
+- **`x402_pay`** - Make paid requests to any x402 endpoint (Solana, Base, Polygon, Arbitrum, Optimism, Avalanche)
+- **`x402_search`** - Search the aggregated directory of 2600+ paid APIs
+
+### Dexter MCP Tools (OAuth Required)
+
+Connect to Dexter's 59+ Solana DeFi tools via OAuth:
+
+- **`dexter_x402`** - Gateway to wallet management, trading, analytics, games, and more
 
 ## Quick Start
 
-### 1. Authenticate
+### Option A: Generic x402 (No Auth - Config Only)
+
+Add your wallet keys to `~/.moltbot/moltbot.json`:
+
+```json
+{
+  "plugins": {
+    "dexter-x402": {
+      "svmPrivateKey": "YOUR_SOLANA_PRIVATE_KEY",
+      "evmPrivateKey": "0xYOUR_EVM_PRIVATE_KEY",
+      "maxPaymentUSDC": "0.50"
+    }
+  }
+}
+```
+
+Then use:
+```bash
+# Search for paid APIs
+moltbot agent -m "Use x402_search to find weather APIs"
+
+# Call a paid endpoint
+moltbot agent -m "Use x402_pay to call https://example.com/api/data"
+```
+
+### Option B: Dexter Tools (OAuth Required)
+
+#### 1. Authenticate
 
 ```bash
 moltbot models auth login --provider dexter-x402
@@ -162,23 +199,89 @@ The plugin uses the official `@modelcontextprotocol/sdk` to:
 
 ## Configuration
 
-Optional settings in `~/.moltbot/moltbot.json`:
+Full configuration in `~/.moltbot/moltbot.json`:
 
 ```json
 {
   "plugins": {
     "dexter-x402": {
+      "svmPrivateKey": "base58_solana_private_key",
+      "evmPrivateKey": "0x_hex_evm_private_key",
+      "defaultNetwork": "solana",
+      "maxPaymentUSDC": "0.50",
       "baseUrl": "https://mcp.dexter.cash/mcp",
-      "autoRefreshTools": true
+      "directoryUrl": "https://api.dexter.cash/api/x402/directory",
+      "autoRefreshTools": true,
+      "disableTelemetry": false
     }
   }
 }
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `baseUrl` | `https://mcp.dexter.cash/mcp` | MCP server endpoint |
-| `autoRefreshTools` | `true` | Refresh tool list on connection |
+### Config Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `svmPrivateKey` | string | - | Solana private key (base58) for x402 payments |
+| `evmPrivateKey` | string | - | EVM private key (hex) for Base/Polygon/etc payments |
+| `defaultNetwork` | string | `"solana"` | Preferred network: solana, base, polygon, arbitrum, optimism, avalanche |
+| `maxPaymentUSDC` | string | `"0.50"` | Maximum payment per request (e.g., "0.50" = $0.50) |
+| `baseUrl` | string | `https://mcp.dexter.cash/mcp` | Dexter MCP server (for authenticated tools) |
+| `directoryUrl` | string | `https://x402.dexter.cash/api/x402/directory` | x402 directory API |
+| `autoRefreshTools` | boolean | `true` | Refresh Dexter tool list on connection |
+| `disableTelemetry` | boolean | `false` | Disable anonymous usage telemetry |
+
+## Tools Reference
+
+### x402_pay (Generic Payments)
+
+Call ANY x402-enabled paid API with automatic USDC payment. No authentication required - just configure wallet keys.
+
+**Supported Networks:** Solana, Base, Polygon, Arbitrum, Optimism, Avalanche
+
+**Parameters:**
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | Yes | The x402-enabled endpoint URL |
+| `method` | string | No | HTTP method (default: GET) |
+| `params` | object | No | Query params (GET) or JSON body (POST) |
+| `headers` | object | No | Custom HTTP headers |
+
+**Example:**
+```bash
+moltbot agent -m "Use x402_pay to call https://x402.dexter.cash/api/onchain/activity/overview with params {\"entityId\": \"SOL\"}"
+```
+
+**How it works:**
+1. Makes request to the URL
+2. If 402 returned, SDK automatically signs USDC payment
+3. Retries request with payment proof
+4. Returns response data
+
+### x402_search (Directory Search)
+
+Search the aggregated directory of x402-enabled paid APIs. Combines Dexter's catalog with external sources.
+
+**Parameters:**
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | No | Search term (searches url, description) |
+| `network` | string | No | Filter: solana, base, polygon, arbitrum, optimism, avalanche |
+| `verified` | boolean | No | Only show verified endpoints |
+| `limit` | number | No | Max results (default: 10, max: 50) |
+
+**Example:**
+```bash
+moltbot agent -m "Use x402_search to find Solana analytics APIs"
+```
+
+**Response includes:**
+- Endpoint URL and method
+- Network and pricing
+- Description and verification status
+- Success rate (when available)
+
+### dexter_x402 (Authenticated Dexter Tools)
 
 ## How It Works
 

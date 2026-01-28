@@ -1,28 +1,76 @@
 {
   "id": "dexter-x402",
   "name": "Dexter x402",
-  "description": "Connect to Dexter's 59+ Solana DeFi tools via x402 protocol. Trading, analytics, games, creative APIs, and more.",
+  "description": "x402 payments + Dexter DeFi tools. Generic x402_pay/x402_search for ANY paid API (config-based), plus 59+ authenticated Dexter MCP tools.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
+      "svmPrivateKey": {
+        "type": "string",
+        "description": "Solana wallet private key (base58) for x402 payments on Solana"
+      },
+      "evmPrivateKey": {
+        "type": "string",
+        "description": "EVM wallet private key (hex, with or without 0x) for x402 payments on Base/Polygon/etc"
+      },
+      "defaultNetwork": {
+        "type": "string",
+        "enum": ["solana", "base", "polygon", "arbitrum", "optimism", "avalanche"],
+        "default": "solana",
+        "description": "Preferred network when endpoint supports multiple"
+      },
+      "maxPaymentUSDC": {
+        "type": "string",
+        "default": "0.50",
+        "description": "Maximum payment per request in USDC (e.g., '0.50' = $0.50)"
+      },
       "baseUrl": {
         "type": "string",
         "default": "https://mcp.dexter.cash/mcp",
-        "description": "Dexter MCP server URL (only change for custom instances)"
+        "description": "Dexter MCP server URL for authenticated tools"
+      },
+      "directoryUrl": {
+        "type": "string",
+        "default": "https://x402.dexter.cash/api/x402/directory",
+        "description": "x402 directory API for discovering paid endpoints"
       },
       "autoRefreshTools": {
         "type": "boolean",
         "default": true,
-        "description": "Automatically refresh tool list on session start"
+        "description": "Automatically refresh Dexter tool list on session start"
+      },
+      "disableTelemetry": {
+        "type": "boolean",
+        "default": false,
+        "description": "Disable anonymous usage telemetry"
       }
     }
   },
   "uiHints": {
+    "svmPrivateKey": {
+      "label": "Solana Private Key",
+      "inputType": "password",
+      "help": "Base58-encoded Solana private key for USDC payments"
+    },
+    "evmPrivateKey": {
+      "label": "EVM Private Key",
+      "inputType": "password",
+      "help": "Hex private key for Base/Polygon/Arbitrum/Optimism/Avalanche payments"
+    },
+    "maxPaymentUSDC": {
+      "label": "Max Payment (USDC)",
+      "help": "Maximum amount to pay per API request"
+    },
     "baseUrl": {
       "label": "MCP Server URL",
       "advanced": true,
-      "help": "Default: https://mcp.dexter.cash/mcp"
+      "help": "For authenticated Dexter tools. Default: https://mcp.dexter.cash/mcp"
+    },
+    "directoryUrl": {
+      "label": "Directory API URL",
+      "advanced": true,
+      "help": "x402 endpoint discovery. Default: https://api.dexter.cash/api/x402/directory"
     }
   }
 }

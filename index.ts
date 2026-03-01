@@ -765,6 +765,7 @@ type PluginConfig = {
 };
 
 const DEFAULT_DIRECTORY_URL = "https://x402.dexter.cash/api/x402/directory";
+const DEFAULT_MARKETPLACE_URL = "https://x402.dexter.cash/api/facilitator/marketplace/resources";
 const DEXTER_TELEMETRY_URL = "https://x402.dexter.cash/api/x402/telemetry";
 
 // Network name to CAIP-2 mapping
@@ -834,62 +835,81 @@ class DexterTelemetry {
 }
 
 /**
- * Search the Dexter x402 directory
+ * Search the Dexter x402 marketplace for paid API resources.
+ * Uses the rich marketplace API with quality scores, verification, reputation.
  */
-async function searchDirectory(
+async function searchMarketplace(
   query?: string,
   options?: {
     network?: string;
     verified?: boolean;
+    category?: string;
+    maxPriceUsdc?: number;
+    sort?: string;
     limit?: number;
-    directoryUrl?: string;
+    marketplaceUrl?: string;
   }
 ): Promise<{
-  endpoints: Array<{
+  resources: Array<{
+    name: string;
     url: string;
     method: string;
-    network?: string;
-    priceUsdc?: string;
-    description?: string;
+    price: string;
+    network: string | null;
+    description: string;
+    category: string;
+    qualityScore: number | null;
     verified: boolean;
-    successRate?: number;
-    params?: Record<string, unknown>;
+    totalCalls: number;
+    totalVolume: string | null;
+    seller: string | null;
+    sellerReputation: number | null;
   }>;
   total: number;
 }> {
-  const baseUrl = options?.directoryUrl || DEFAULT_DIRECTORY_URL;
+  const baseUrl = options?.marketplaceUrl || DEFAULT_MARKETPLACE_URL;
   const params = new URLSearchParams();
   if (query) params.set("search", query);
   if (options?.network) params.set("network", options.network);
-  if (options?.verified !== undefined) params.set("verified", String(options.verified));
-  if (options?.limit) params.set("limit", String(options.limit));
+  if (options?.verified) params.set("verified", "true");
+  if (options?.category) params.set("category", options.category);
+  if (options?.maxPriceUsdc != null) params.set("maxPrice", String(options.maxPriceUsdc));
+  params.set("sort", options?.sort || "marketplace");
+  params.set("order", "desc");
+  params.set("limit", String(Math.min(options?.limit || 20, 50)));
 
   try {
     const response = await fetch(`${baseUrl}?${params}`, {
       headers: { Accept: "application/json" },
     });
     if (!response.ok) {
-      throw new Error(`Directory search failed: ${response.status}`);
+      throw new Error(`Marketplace search failed: ${response.status}`);
     }
     const data = (await response.json()) as {
-      endpoints?: Array<{
-        url: string;
-        method: string;
-        network?: string;
-        priceUsdc?: string;
-        description?: string;
-        verified: boolean;
-        successRate?: number;
-        params?: Record<string, unknown>;
-      }>;
-      pagination?: { total?: number };
+      ok?: boolean;
+      resources?: Array<Record<string, unknown>>;
+      total?: number;
     };
-    return {
-      endpoints: data.endpoints || [],
-      total: data.pagination?.total || 0,
-    };
+
+    const resources = (data.resources || []).map((r: Record<string, unknown>) => ({
+      name: (r.displayName as string) || (r.resourceUrl as string),
+      url: r.resourceUrl as string,
+      method: (r.method as string) || "GET",
+      price: (r.priceLabel as string) || (r.priceUsdc != null ? `$${Number(r.priceUsdc).toFixed(2)}` : "free"),
+      network: (r.priceNetwork as string) || null,
+      description: (r.description as string) || "",
+      category: (r.category as string) || "uncategorized",
+      qualityScore: (r.qualityScore as number) ?? null,
+      verified: r.verificationStatus === "pass",
+      totalCalls: (r.totalSettlements as number) ?? 0,
+      totalVolume: r.totalVolumeUsdc != null ? `$${Number(r.totalVolumeUsdc).toLocaleString()}` : null,
+      seller: (r.seller as Record<string, unknown>)?.displayName as string || null,
+      sellerReputation: (r.reputationScore as number) ?? null,
+    }));
+
+    return { resources, total: data.total || resources.length };
   } catch {
-    return { endpoints: [], total: 0 };
+    return { resources: [], total: 0 };
   }
 }
 
@@ -1129,34 +1149,30 @@ function createX402PayTool(config: PluginConfig, telemetry: DexterTelemetry) {
 function createX402SearchTool(config: PluginConfig) {
   return {
     name: "x402_search",
-    label: "x402 Search",
+    label: "x402 Marketplace Search",
     description:
-      "Search for x402-enabled paid APIs. Find endpoints by keyword, filter by network (solana/base/polygon/etc), see pricing. Directory aggregated by Dexter.",
+      "Search the Dexter x402 marketplace for paid API resources. Returns services with pricing, quality scores, verification status, settlement volume, and seller reputation. Use this to discover APIs an agent can pay for.",
     parameters: Type.Object({
-      query: Type.Optional(Type.String({ description: "Search term (searches url, title, description)" })),
-      network: Type.Optional(Type.String({ description: "Filter by network: solana, base, polygon, etc." })),
-      verified: Type.Optional(Type.Boolean({ description: "Only show verified endpoints" })),
-      limit: Type.Optional(Type.Number({ description: "Max results (default: 10, max: 50)" })),
+      query: Type.Optional(Type.String({ description: "Search term (e.g. \"token analysis\", \"image generation\", \"sentiment\")" })),
+      network: Type.Optional(Type.String({ description: "Filter by payment network: solana, base, polygon, etc." })),
+      verified: Type.Optional(Type.Boolean({ description: "Only show verified (quality-checked) endpoints" })),
+      category: Type.Optional(Type.String({ description: "Filter by category (e.g. \"api\", \"games\", \"creative\")" })),
+      maxPriceUsdc: Type.Optional(Type.Number({ description: "Maximum price per call in USDC" })),
+      sort: Type.Optional(Type.String({ description: "Sort: marketplace (default), relevance, quality_score, settlements, volume, recent" })),
+      limit: Type.Optional(Type.Number({ description: "Max results (default: 20, max: 50)" })),
     }),
 
     async execute(_id: string, input: Record<string, unknown>) {
       try {
-        const result = await searchDirectory(input.query as string | undefined, {
+        const result = await searchMarketplace(input.query as string | undefined, {
           network: input.network as string | undefined,
           verified: input.verified as boolean | undefined,
-          limit: Math.min((input.limit as number | undefined) || 10, 50),
-          directoryUrl: config.directoryUrl,
+          category: input.category as string | undefined,
+          maxPriceUsdc: input.maxPriceUsdc as number | undefined,
+          sort: input.sort as string | undefined,
+          limit: Math.min((input.limit as number | undefined) || 20, 50),
+          marketplaceUrl: config.directoryUrl,
         });
-
-        const formattedEndpoints = result.endpoints.map((ep) => ({
-          url: ep.url,
-          method: ep.method,
-          network: ep.network,
-          price: ep.priceUsdc ? `$${ep.priceUsdc} USDC` : "unknown",
-          description: ep.description || "(no description)",
-          verified: ep.verified ? "✓ verified" : "unverified",
-          successRate: ep.successRate != null ? `${ep.successRate.toFixed(1)}%` : "unknown",
-        }));
 
         return {
           content: [
@@ -1166,16 +1182,17 @@ function createX402SearchTool(config: PluginConfig) {
                 {
                   success: true,
                   total: result.total,
-                  showing: formattedEndpoints.length,
-                  endpoints: formattedEndpoints,
-                  source: "Dexter x402 Directory (https://dexter.cash)",
+                  showing: result.resources.length,
+                  resources: result.resources,
+                  source: "Dexter x402 Marketplace (https://dexter.cash)",
+                  tip: "Use x402_pay to call any of these endpoints. Payment is handled automatically.",
                 },
                 null,
                 2
               ),
             },
           ],
-          details: { endpoints: formattedEndpoints, total: result.total },
+          details: { resources: result.resources, total: result.total },
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1189,6 +1206,152 @@ function createX402SearchTool(config: PluginConfig) {
           details: { error: errorMessage },
         };
       }
+    },
+  };
+}
+
+/**
+ * Create x402_fetch tool — auto-pay version of x402_pay using wrapFetch
+ */
+function createX402FetchTool(config: PluginConfig, telemetry: DexterTelemetry) {
+  const payTool = createX402PayTool(config, telemetry);
+
+  return {
+    name: "x402_fetch",
+    label: "x402 Fetch",
+    description:
+      "Call any x402-protected API with automatic payment. If a wallet is configured, signs and pays automatically. Returns the API response directly. Use x402_search to discover endpoints first.",
+    parameters: Type.Object({
+      url: Type.String({ description: "The x402 resource URL to call" }),
+      method: Type.Optional(Type.String({ description: "HTTP method (default: GET)" })),
+      body: Type.Optional(Type.String({ description: "JSON request body for POST/PUT" })),
+    }),
+
+    async execute(_id: string, input: Record<string, unknown>) {
+      return payTool.execute(_id, {
+        url: input.url,
+        method: input.method,
+        params: input.body ? JSON.parse(input.body as string) : undefined,
+      });
+    },
+  };
+}
+
+/**
+ * Create x402_check tool — probe an endpoint for pricing without paying
+ */
+function createX402CheckTool() {
+  return {
+    name: "x402_check",
+    label: "x402 Check",
+    description:
+      "Check if an endpoint requires x402 payment and see its pricing per chain. Does NOT make a payment — just probes for requirements.",
+    parameters: Type.Object({
+      url: Type.String({ description: "The URL to check" }),
+      method: Type.Optional(Type.String({ description: "HTTP method to probe with (default: GET)" })),
+    }),
+
+    async execute(_id: string, input: Record<string, unknown>) {
+      const url = input.url as string;
+      const method = ((input.method as string) || "GET").toUpperCase();
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: method !== "GET" ? "{}" : undefined,
+          signal: AbortSignal.timeout(15_000),
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify({
+              error: true, statusCode: res.status, authRequired: true,
+              message: "Provider authentication required before x402 payment flow.",
+            }, null, 2) }],
+          };
+        }
+
+        if (res.status !== 402) {
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify({
+              requiresPayment: false, statusCode: res.status, free: res.ok,
+            }, null, 2) }],
+          };
+        }
+
+        let body: Record<string, unknown> | null = null;
+        try { body = await res.json() as Record<string, unknown>; } catch {}
+
+        const accepts = (body?.accepts as Array<Record<string, unknown>>) || [];
+        const paymentOptions = accepts.map((a) => {
+          const amount = Number(a.amount || a.maxAmountRequired || 0);
+          const decimals = Number((a.extra as Record<string, unknown>)?.decimals ?? 6);
+          return {
+            price: amount / Math.pow(10, decimals),
+            priceFormatted: `$${(amount / Math.pow(10, decimals)).toFixed(decimals > 2 ? 4 : 2)}`,
+            network: a.network,
+            scheme: a.scheme,
+            asset: a.asset,
+            payTo: a.payTo,
+          };
+        });
+
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({
+            requiresPayment: true,
+            statusCode: 402,
+            x402Version: body?.x402Version ?? 2,
+            paymentOptions,
+          }, null, 2) }],
+        };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ error: true, message: msg }, null, 2) }],
+        };
+      }
+    },
+  };
+}
+
+/**
+ * Create x402_wallet tool — show configured wallet info and balance
+ */
+function createX402WalletTool(config: PluginConfig) {
+  return {
+    name: "x402_wallet",
+    label: "x402 Wallet",
+    description:
+      "Show wallet address and USDC balance. The wallet is used to automatically pay for x402 API calls via x402_pay and x402_fetch.",
+    parameters: Type.Object({}),
+
+    async execute(_id: string, _input: Record<string, unknown>) {
+      if (!config.svmPrivateKey && !config.evmPrivateKey) {
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({
+            error: "No wallet configured",
+            tip: "Set svmPrivateKey (Solana) or evmPrivateKey (EVM) in ClawDexter plugin config.",
+          }, null, 2) }],
+        };
+      }
+
+      const wallets: Array<{ type: string; network: string; configured: boolean }> = [];
+      if (config.svmPrivateKey) {
+        wallets.push({ type: "solana", network: config.defaultNetwork || "solana", configured: true });
+      }
+      if (config.evmPrivateKey) {
+        wallets.push({ type: "evm", network: config.defaultNetwork || "base", configured: true });
+      }
+
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify({
+          wallets,
+          defaultNetwork: config.defaultNetwork || "auto",
+          maxPaymentUsdc: config.maxPaymentUSDC || "0.50",
+          tip: "Use x402_fetch or x402_pay to call paid APIs. Payment is automatic.",
+        }, null, 2) }],
+      };
     },
   };
 }
@@ -1476,9 +1639,31 @@ const dexterMcpPlugin = {
       { name: "x402_search" }
     );
 
+    // Register x402_fetch tool (auto-pay via wrapFetch)
+    const x402FetchTool = createX402FetchTool(config, telemetry);
+    api.registerTool(
+      () => x402FetchTool,
+      { name: "x402_fetch" }
+    );
+
+    // Register x402_check tool (pricing preview)
+    api.registerTool(
+      () => createX402CheckTool(),
+      { name: "x402_check" }
+    );
+
+    // Register x402_wallet tool (wallet info)
+    api.registerTool(
+      () => createX402WalletTool(config),
+      { name: "x402_wallet" }
+    );
+
     api.logger.info("Dexter x402 plugin registered");
     api.logger.info(`  - x402_pay: ${config.svmPrivateKey || config.evmPrivateKey ? "wallet configured" : "no wallet (config required)"}`);
-    api.logger.info(`  - x402_search: directory at ${config.directoryUrl || DEFAULT_DIRECTORY_URL}`);
+    api.logger.info(`  - x402_fetch: ${config.svmPrivateKey || config.evmPrivateKey ? "auto-pay enabled" : "no wallet (returns requirements)"}`);
+    api.logger.info(`  - x402_search: marketplace at ${config.directoryUrl || DEFAULT_MARKETPLACE_URL}`);
+    api.logger.info(`  - x402_check: pricing preview`);
+    api.logger.info(`  - x402_wallet: wallet info`);
     api.logger.info(`  - dexter_x402: ${config.baseUrl || DEFAULT_BASE_URL} (OAuth required)`);
   },
 };

@@ -1,9 +1,23 @@
 {
   "name": "@dexterai/clawdexter",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "ClawDexter - OpenClaw plugin for x402 payments + Dexter DeFi tools. Generic x402_pay/x402_search for ANY paid API, plus 59+ Dexter MCP tools via OAuth.",
-  "keywords": ["clawdexter", "openclaw", "moltbot", "x402", "dexter", "solana", "defi", "mcp", "oauth", "plugin", "payments", "usdc", "base"],
+  "keywords": [
+    "clawdexter",
+    "openclaw",
+    "moltbot",
+    "x402",
+    "dexter",
+    "solana",
+    "defi",
+    "mcp",
+    "oauth",
+    "plugin",
+    "payments",
+    "usdc",
+    "base"
+  ],
   "author": "Dexter AI <dev@dexter.cash>",
   "license": "MIT",
   "repository": {

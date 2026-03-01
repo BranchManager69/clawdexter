@@ -1,11 +1,24 @@
-# Dexter x402 Plugin for Moltbot
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Dexter-DAO/dexter-x402-sdk/main/assets/dexter-wordmark.svg" alt="Dexter" width="360">
+</p>
 
-The most comprehensive x402 payment plugin for Moltbot. Provides:
+<h1 align="center">@dexterai/clawdexter</h1>
 
-1. **x402 Marketplace Search** (`x402_search`) - Search 5,000+ paid APIs with quality ranking
-2. **x402 Payments** (`x402_fetch`, `x402_pay`) - Call any x402 API with automatic USDC payment
-3. **Pricing & Wallet** (`x402_check`, `x402_wallet`) - Preview costs and manage wallet
-4. **59+ Dexter DeFi Tools** (`dexter_x402`) - Authenticated access to Dexter MCP tools
+<p align="center">
+  <strong>x402 payments + marketplace for OpenClaw agents. Search, price-check, and pay for any paid API.</strong>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@dexterai/clawdexter"><img src="https://img.shields.io/npm/v/@dexterai/clawdexter.svg" alt="npm"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E=18-brightgreen.svg" alt="Node"></a>
+  <a href="https://dexter.cash/marketplace"><img src="https://img.shields.io/badge/Marketplace-dexter.cash-blueviolet" alt="Marketplace"></a>
+</p>
+
+<p align="center">
+  <a href="https://dexter.cash/opendexter"><strong>Browse paid APIs →</strong></a>
+</p>
+
+---
 
 ## Overview
 
@@ -29,7 +42,7 @@ Connect to Dexter's 59+ Solana DeFi tools via OAuth:
 
 ### Option A: Generic x402 (No Auth - Config Only)
 
-Add your wallet keys to `~/.moltbot/moltbot.json`:
+Add your wallet keys to `~/.openclaw/openclaw.json`:
 
 ```json
 {
@@ -46,10 +59,10 @@ Add your wallet keys to `~/.moltbot/moltbot.json`:
 Then use:
 ```bash
 # Search for paid APIs
-moltbot agent -m "Use x402_search to find weather APIs"
+openclaw agent -m "Use x402_search to find weather APIs"
 
 # Call a paid endpoint
-moltbot agent -m "Use x402_pay to call https://example.com/api/data"
+openclaw agent -m "Use x402_pay to call https://example.com/api/data"
 ```
 
 ### Option B: Dexter Tools (OAuth Required)
@@ -57,10 +70,10 @@ moltbot agent -m "Use x402_pay to call https://example.com/api/data"
 #### 1. Authenticate
 
 ```bash
-moltbot models auth login --provider dexter-x402
+openclaw models auth login --provider dexter-x402
 ```
 
-This opens OAuth flow in your browser. Sign in with your Dexter account and authorize Moltbot.
+This opens OAuth flow in your browser. Sign in with your Dexter account and authorize OpenClaw.
 
 ### 2. Use Tools
 
@@ -68,16 +81,16 @@ The plugin exposes a single gateway tool `dexter_x402` that provides access to a
 
 ```bash
 # List available tools
-moltbot agent --local --session-id demo -m "Use dexter_x402 with action='list'"
+openclaw agent --local --session-id demo -m "Use dexter_x402 with action='list'"
 
 # Call a specific tool
-moltbot agent --local --session-id demo -m "Use dexter_x402 to check trending Solana tokens"
+openclaw agent --local --session-id demo -m "Use dexter_x402 to check trending Solana tokens"
 ```
 
 Or simply ask naturally:
 
 ```bash
-moltbot agent --local --session-id demo -m "What's trending on Solana right now?"
+openclaw agent --local --session-id demo -m "What's trending on Solana right now?"
 ```
 
 ## Available Tools (59+)
@@ -169,7 +182,7 @@ moltbot agent --local --session-id demo -m "What's trending on Solana right now?
 
 ```
 ┌─────────────────┐     OAuth 2.0 + PKCE      ┌──────────────────┐
-│    Moltbot      │◄─────────────────────────►│  Dexter OAuth    │
+│    OpenClaw      │◄─────────────────────────►│  Dexter OAuth    │
 │  (dexter-x402    │                           │  (dexter-api)    │
 │    plugin)      │                           └──────────────────┘
 └────────┬────────┘
@@ -188,8 +201,8 @@ moltbot agent --local --session-id demo -m "What's trending on Solana right now?
 ### Authentication Flow
 
 **Primary (Desktop/CLI):**
-1. **Link Request**: Plugin creates a tracking code via `api.dexter.cash/api/moltbot/link/create`
-2. **DCR**: Plugin registers with Dexter's OAuth server using remote callback (`dexter.cash/moltbot/link/callback`)
+1. **Link Request**: Plugin creates a tracking code via `api.dexter.cash/api/openclaw/link/create`
+2. **DCR**: Plugin registers with Dexter's OAuth server using remote callback (`dexter.cash/openclaw/link/callback`)
 3. **PKCE Authorization**: Browser-based OAuth with S256 code challenge
 4. **Remote Callback**: OAuth redirects to `dexter.cash`, backend stores tokens
 5. **Poll Completion**: Plugin polls for tokens, retrieves them when ready
@@ -197,7 +210,7 @@ moltbot agent --local --session-id demo -m "What's trending on Solana right now?
 
 **Fallback (Telegram/Remote):**
 1. **Device Code**: Plugin creates link code, displays to user
-2. **Manual Auth**: User visits `dexter.cash/moltbot/link?code=XXXX`, signs in
+2. **Manual Auth**: User visits `dexter.cash/openclaw/link?code=XXXX`, signs in
 3. **Poll Completion**: Plugin polls until user completes auth
 
 ### MCP Integration
@@ -211,7 +224,7 @@ The plugin uses the official `@modelcontextprotocol/sdk` to:
 
 ## Configuration
 
-Full configuration in `~/.moltbot/moltbot.json`:
+Full configuration in `~/.openclaw/openclaw.json`:
 
 ```json
 {
@@ -261,7 +274,7 @@ Call ANY x402-enabled paid API with automatic USDC payment. No authentication re
 
 **Example:**
 ```bash
-moltbot agent -m "Use x402_pay to call https://x402.dexter.cash/api/onchain/activity/overview with params {\"entityId\": \"SOL\"}"
+openclaw agent -m "Use x402_pay to call https://x402.dexter.cash/api/onchain/activity/overview with params {\"entityId\": \"SOL\"}"
 ```
 
 **How it works:**
@@ -284,7 +297,7 @@ Search the aggregated directory of x402-enabled paid APIs. Combines Dexter's cat
 
 **Example:**
 ```bash
-moltbot agent -m "Use x402_search to find Solana analytics APIs"
+openclaw agent -m "Use x402_search to find Solana analytics APIs"
 ```
 
 **Response includes:**
@@ -362,7 +375,7 @@ Rather than registering 59+ individual tools (which would overwhelm the agent's 
 
 OAuth credentials are stored in:
 ```
-~/.moltbot/auth-profiles.json
+~/.openclaw/auth-profiles.json
 # or legacy location:
 ~/.clawdbot/agents/main/agent/auth-profiles.json
 ```
@@ -390,7 +403,7 @@ Format:
 
 The tool couldn't find valid credentials. Run:
 ```bash
-moltbot models auth login --provider dexter-x402
+openclaw models auth login --provider dexter-x402
 ```
 
 ### OAuth on Telegram or remote server
@@ -398,9 +411,9 @@ moltbot models auth login --provider dexter-x402
 The plugin automatically uses device code flow for Telegram and remote environments:
 
 1. Plugin displays a link code (e.g., `ABC12345`)
-2. Visit `dexter.cash/moltbot/link?code=ABC12345` in any browser
+2. Visit `dexter.cash/openclaw/link?code=ABC12345` in any browser
 3. Sign in to Dexter and click "Connect"
-4. Return to Moltbot - it will detect the auth automatically
+4. Return to OpenClaw - it will detect the auth automatically
 
 No localhost or port forwarding needed.
 
@@ -408,7 +421,7 @@ No localhost or port forwarding needed.
 
 Tokens auto-refresh. If refresh fails, re-authenticate:
 ```bash
-moltbot models auth login --provider dexter-x402
+openclaw models auth login --provider dexter-x402
 ```
 
 ### MCP connection errors
@@ -422,7 +435,7 @@ curl https://mcp.dexter.cash/mcp/health
 
 Ensure the plugin is enabled:
 ```bash
-cat ~/.moltbot/moltbot.json | jq '.plugins'
+cat ~/.openclaw/openclaw.json | jq '.plugins'
 ```
 
 ## Development
@@ -430,21 +443,21 @@ cat ~/.moltbot/moltbot.json | jq '.plugins'
 ### Building
 
 ```bash
-cd /path/to/moltbot-research
+cd /path/to/openclaw-research
 pnpm build
 ```
 
 ### Testing OAuth Flow
 
 ```bash
-./moltbot.mjs models auth login --provider dexter-x402
+./openclaw.mjs models auth login --provider dexter-x402
 ```
 
 ### Testing Tool Execution
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-./moltbot.mjs agent --local --session-id test -m "Use dexter_x402 with action='list'"
+./openclaw.mjs agent --local --session-id test -m "Use dexter_x402 with action='list'"
 ```
 
 ## Dependencies

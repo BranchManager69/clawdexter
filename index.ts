@@ -758,6 +758,7 @@ type PluginConfig = {
   defaultNetwork?: string;
   maxPaymentUSDC?: string;
   directoryUrl?: string;
+  marketplaceUrl?: string;
   disableTelemetry?: boolean;
   // Dexter MCP config (requires OAuth)
   baseUrl?: string;
@@ -1171,7 +1172,7 @@ function createX402SearchTool(config: PluginConfig) {
           maxPriceUsdc: input.maxPriceUsdc as number | undefined,
           sort: input.sort as string | undefined,
           limit: Math.min((input.limit as number | undefined) || 20, 50),
-          marketplaceUrl: config.directoryUrl,
+          marketplaceUrl: config.marketplaceUrl,
         });
 
         return {
@@ -1297,12 +1298,17 @@ function createX402CheckTool() {
           };
         });
 
+        const resource = body?.resource ?? null;
+        const schema = accepts[0]?.outputSchema ?? null;
+
         return {
           content: [{ type: "text" as const, text: JSON.stringify({
             requiresPayment: true,
             statusCode: 402,
             x402Version: body?.x402Version ?? 2,
             paymentOptions,
+            resource,
+            schema,
           }, null, 2) }],
         };
       } catch (error) {
@@ -1661,7 +1667,7 @@ const dexterMcpPlugin = {
     api.logger.info("Dexter x402 plugin registered");
     api.logger.info(`  - x402_pay: ${config.svmPrivateKey || config.evmPrivateKey ? "wallet configured" : "no wallet (config required)"}`);
     api.logger.info(`  - x402_fetch: ${config.svmPrivateKey || config.evmPrivateKey ? "auto-pay enabled" : "no wallet (returns requirements)"}`);
-    api.logger.info(`  - x402_search: marketplace at ${config.directoryUrl || DEFAULT_MARKETPLACE_URL}`);
+    api.logger.info(`  - x402_search: marketplace at ${config.marketplaceUrl || DEFAULT_MARKETPLACE_URL}`);
     api.logger.info(`  - x402_check: pricing preview`);
     api.logger.info(`  - x402_wallet: wallet info`);
     api.logger.info(`  - dexter_x402: ${config.baseUrl || DEFAULT_BASE_URL} (OAuth required)`);

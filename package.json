@@ -1,6 +1,6 @@
 {
   "name": "@dexterai/clawdexter",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "type": "module",
   "description": "ClawDexter - OpenClaw plugin for x402 payments + Dexter DeFi tools. Generic x402_pay/x402_search for ANY paid API, plus 59+ Dexter MCP tools via OAuth.",
   "keywords": [

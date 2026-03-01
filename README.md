@@ -2,9 +2,10 @@
 
 The most comprehensive x402 payment plugin for Moltbot. Provides:
 
-1. **Generic x402 Payments** (`x402_pay`) - Call ANY x402-enabled paid API with automatic USDC payment
-2. **x402 Directory Search** (`x402_search`) - Discover paid APIs across multiple networks
-3. **59+ Dexter DeFi Tools** (`dexter_x402`) - Authenticated access to Dexter's MCP tools
+1. **x402 Marketplace Search** (`x402_search`) - Search 5,000+ paid APIs with quality ranking
+2. **x402 Payments** (`x402_fetch`, `x402_pay`) - Call any x402 API with automatic USDC payment
+3. **Pricing & Wallet** (`x402_check`, `x402_wallet`) - Preview costs and manage wallet
+4. **59+ Dexter DeFi Tools** (`dexter_x402`) - Authenticated access to Dexter MCP tools
 
 ## Overview
 
@@ -12,8 +13,11 @@ The most comprehensive x402 payment plugin for Moltbot. Provides:
 
 Configure your wallet keys and start making paid API calls immediately:
 
-- **`x402_pay`** - Make paid requests to any x402 endpoint (Solana, Base, Polygon, Arbitrum, Optimism, Avalanche)
-- **`x402_search`** - Search the aggregated directory of 2600+ paid APIs
+- **`x402_search`** - Search the marketplace for 5,000+ paid APIs with quality scores and ranking
+- **`x402_fetch`** - Call any x402 API with automatic payment (recommended)
+- **`x402_pay`** - Call any x402 API with manual payment control
+- **`x402_check`** - Preview endpoint pricing without paying
+- **`x402_wallet`** - View wallet address and balances
 
 ### Dexter MCP Tools (OAuth Required)
 
@@ -288,6 +292,41 @@ moltbot agent -m "Use x402_search to find Solana analytics APIs"
 - Network and pricing
 - Description and verification status
 - Success rate (when available)
+
+### x402_fetch (Auto-Pay)
+
+Call any x402 endpoint with automatic payment from your configured wallet.
+
+```
+"Use x402_fetch to call https://x402.dexter.cash/api/jupiter/quote"
+```
+
+| Parameter | Type   | Description                    |
+|-----------|--------|--------------------------------|
+| url       | string | The x402 resource URL to call  |
+| method    | string | HTTP method (default: GET)     |
+| body      | string | JSON request body for POST/PUT |
+
+### x402_check (Pricing Preview)
+
+Probe an endpoint to see payment requirements per chain without paying.
+
+```
+"Use x402_check to see what https://x402.dexter.cash/api/jupiter/quote costs"
+```
+
+| Parameter | Type   | Description                         |
+|-----------|--------|-------------------------------------|
+| url       | string | The URL to check                    |
+| method    | string | HTTP method to probe with (GET)     |
+
+### x402_wallet (Wallet Info)
+
+Show configured wallet info and balances.
+
+```
+"Use x402_wallet to check my balance"
+```
 
 ### dexter_x402 (Authenticated Dexter Tools)
 

@@ -1,8 +1,8 @@
 {
   "name": "@dexterai/clawdexter",
-  "version": "1.1.5",
+  "version": "3.0.0",
   "type": "module",
-  "description": "ClawDexter - OpenClaw plugin for x402 marketplace search, payments, and 59+ Dexter DeFi tools. Search 5,000+ paid APIs, auto-pay with USDC, plus trading, analytics, and media generation.",
+  "description": "x402 payments + marketplace for OpenClaw agents. Search 5,000+ paid APIs, price-check endpoints, and auto-pay with USDC across Solana, Base, and 4 more chains.",
   "keywords": [
     "clawdexter",
     "openclaw",
@@ -11,12 +11,11 @@
     "dexter",
     "solana",
     "base",
-    "defi",
-    "mcp",
     "payments",
     "usdc",
     "marketplace",
-    "ai-agents"
+    "ai-agents",
+    "micropayments"
   ],
   "author": "Dexter AI <dev@dexter.cash>",
   "license": "MIT",
@@ -32,7 +31,6 @@
   },
   "dependencies": {
     "@dexterai/x402": "^1.4.0",
-    "@modelcontextprotocol/sdk": "^1.25.3",
     "@sinclair/typebox": "^0.32.0"
   },
   "peerDependencies": {

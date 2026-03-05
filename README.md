@@ -5,13 +5,15 @@
 <h1 align="center">@dexterai/clawdexter</h1>
 
 <p align="center">
-  <strong>x402 payments + marketplace for OpenClaw agents. Search, price-check, and pay for any paid API.</strong>
+  <strong>x402 payments and marketplace for <a href="https://github.com/openclaw/openclaw">OpenClaw</a> agents.</strong><br>
+  Search 5,000+ paid APIs, preview pricing, and auto-pay with USDC across 6 chains.
 </p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@dexterai/clawdexter"><img src="https://img.shields.io/npm/v/@dexterai/clawdexter.svg" alt="npm"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E=18-brightgreen.svg" alt="Node"></a>
   <a href="https://dexter.cash/marketplace"><img src="https://img.shields.io/badge/Marketplace-dexter.cash-blueviolet" alt="Marketplace"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"></a>
 </p>
 
 <p align="center">
@@ -20,457 +22,217 @@
 
 ---
 
-## Overview
+## What is x402?
 
-### Generic x402 Tools (No Auth Required)
+[x402](https://www.x402.org) is an open protocol for HTTP-native micropayments. When a server returns **402 Payment Required**, the client signs a USDC payment and retries — the server verifies and serves the response. No API keys, no subscriptions, no invoices.
 
-Configure your wallet keys and start making paid API calls immediately:
+ClawDexter brings x402 to every OpenClaw agent. It ships 5 tools that let agents discover paid APIs, check prices, pay automatically, and track spending — all with a single wallet configuration.
 
-- **`x402_search`** - Search the marketplace for 5,000+ paid APIs with quality scores and ranking
-- **`x402_fetch`** - Call any x402 API with automatic payment (recommended)
-- **`x402_pay`** - Call any x402 API with manual payment control
-- **`x402_check`** - Preview endpoint pricing without paying
-- **`x402_wallet`** - View wallet address and balances
+## Install
 
-### Dexter MCP Tools (OAuth Required)
+ClawDexter is an OpenClaw plugin. Install it from the OpenClaw plugin registry or add it directly:
 
-Connect to Dexter's 59+ Solana DeFi tools via OAuth:
+```bash
+openclaw plugins install @dexterai/clawdexter
+```
 
-- **`dexter_x402`** - Gateway to wallet management, trading, analytics, games, and more
-
-## Quick Start
-
-### Option A: Generic x402 (No Auth - Config Only)
-
-Add your wallet keys to `~/.openclaw/openclaw.json`:
+Then configure your wallet in `~/.openclaw/openclaw.json`:
 
 ```json
 {
   "plugins": {
-    "dexter-x402": {
-      "svmPrivateKey": "YOUR_SOLANA_PRIVATE_KEY",
-      "evmPrivateKey": "0xYOUR_EVM_PRIVATE_KEY",
+    "clawdexter": {
+      "svmPrivateKey": "base58_solana_private_key",
+      "evmPrivateKey": "0x_hex_evm_private_key",
       "maxPaymentUSDC": "0.50"
     }
   }
 }
 ```
 
-Then use:
-```bash
-# Search for paid APIs
-openclaw agent -m "Use x402_search to find weather APIs"
+You can configure one wallet or both. Solana keys are base58-encoded, EVM keys are hex with `0x` prefix.
 
-# Call a paid endpoint
-openclaw agent -m "Use x402_pay to call https://example.com/api/data"
-```
+## Tools
 
-### Option B: Dexter Tools (OAuth Required)
+### x402_search
 
-#### 1. Authenticate
+Search the Dexter marketplace for x402-enabled paid APIs. Returns quality-ranked results with pricing, verification status, seller reputation, and settlement volume.
 
-```bash
-openclaw models auth login --provider dexter-x402
-```
-
-This opens OAuth flow in your browser. Sign in with your Dexter account and authorize OpenClaw.
-
-### 2. Use Tools
-
-The plugin exposes a single gateway tool `dexter_x402` that provides access to all 59+ Dexter capabilities:
-
-```bash
-# List available tools
-openclaw agent --local --session-id demo -m "Use dexter_x402 with action='list'"
-
-# Call a specific tool
-openclaw agent --local --session-id demo -m "Use dexter_x402 to check trending Solana tokens"
-```
-
-Or simply ask naturally:
-
-```bash
-openclaw agent --local --session-id demo -m "What's trending on Solana right now?"
-```
-
-## Available Tools (59+)
-
-### 💼 Wallet Management
-| Tool | Description |
-|------|-------------|
-| `resolve_wallet` | Resolve the effective managed wallet for this session |
-| `list_my_wallets` | List all wallets linked to your Dexter account |
-| `set_session_wallet_override` | Override wallet for the current session |
-| `auth_info` | Diagnostics for wallet resolution and token state |
-
-### 💱 Solana Trading
-| Tool | Description |
-|------|-------------|
-| `solana_resolve_token` | Resolve token metadata by name, ticker, or address |
-| `solana_send` | Transfer SOL, USDC, DEXTER, PAYAI, or any SPL token |
-| `solana_swap_preview` | Preview a token swap before execution |
-| `solana_swap_execute` | Execute a previewed swap |
-| `jupiter_quote_preview` | Get Jupiter DEX swap quote |
-| `jupiter_quote_pro` | Jupiter quote with pro-tier features |
-
-### 📊 Analytics & Research
-| Tool | Description |
-|------|-------------|
-| `search` | Web search with real-time results |
-| `fetch` | Retrieve and summarize web pages |
-| `pumpstream_live_summary` | Live pump.fun stream analytics |
-| `markets_fetch_ohlcv` | Birdeye OHLCV candle data |
-| `onchain_activity_overview` | On-chain analytics for tokens/wallets |
-| `onchain_entity_insight` | Deep analysis of wallets, tokens, or signatures |
-| `solscan_trending_tokens` | Solscan trending tokens snapshot |
-| `slippage_sentinel` | Volatility analysis & optimal slippage calculation |
-| `twitter_topic_analysis` | Twitter sentiment and conversation analysis |
-
-### 🎬 Creative & Media (x402 Paid)
-| Tool | Description |
-|------|-------------|
-| `sora_video_job` | Generate video clips with OpenAI Sora |
-| `meme_generator_job` | AI-powered meme and image generation |
-| `studio_breaking_news` | Create newscast videos and infographics |
-| `studio_news_status` | Check breaking news job status |
-
-### 🎮 Games
-| Tool | Description |
-|------|-------------|
-| `pokedexter_create_challenge` | Create wagered Pokémon battle ($1-$25) |
-| `pokedexter_accept_challenge` | Accept a battle challenge |
-| `pokedexter_make_move` | Submit battle action |
-| `pokedexter_get_battle_state` | Get current battle state |
-| `pokedexter_join_queue` | Join quick match queue |
-| `games_king_usurp` | Become King of Dexter ($0.01) |
-| `games_king_state` | View current King state |
-| `games_story_append` | Add to the Infinite Story ($0.01) |
-| `games_story_read` | Read the Infinite Story |
-
-### 🚀 Hyperliquid (Perpetuals)
-| Tool | Description |
-|------|-------------|
-| `hyperliquid_markets` | List tradable perp symbols |
-| `hyperliquid_opt_in` | Provision agent wallet for perp trading |
-| `hyperliquid_fund` | Bridge SOL → USDC → Hyperliquid |
-| `hyperliquid_bridge_deposit` | Deposit from Arbitrum |
-| `hyperliquid_perp_trade` | Submit perpetual orders |
-
-### 🔧 Codex Sessions
-| Tool | Description |
-|------|-------------|
-| `codex_start` | Begin a new Codex conversation |
-| `codex_reply` | Follow-up to existing Codex session |
-| `codex_exec` | Run Codex with optional JSON schema |
-
-### 🏭 Studio (Superadmin)
-| Tool | Description |
-|------|-------------|
-| `studio_create` | Start a Studio agent task |
-| `studio_status` | Check job status |
-| `studio_cancel` | Cancel running job |
-| `studio_inspect` | Full job details |
-| `studio_list` | List recent jobs |
-
-### 📺 Stream Engagement
-| Tool | Description |
-|------|-------------|
-| `stream_public_shout` | Submit shout-out for live stream |
-| `stream_shout_feed` | Get latest public shouts |
-
-## Architecture
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | No | Search term (e.g. "token analysis", "image generation") |
+| `network` | string | No | Filter by network: `solana`, `base`, `polygon`, `arbitrum`, `optimism`, `avalanche` |
+| `verified` | boolean | No | Only show quality-verified endpoints |
+| `category` | string | No | Filter by category (e.g. "api", "creative") |
+| `maxPriceUsdc` | number | No | Maximum price per call in USDC |
+| `sort` | string | No | Sort: `marketplace` (default), `relevance`, `quality_score`, `settlements`, `volume`, `recent` |
+| `limit` | number | No | Max results (default 20, max 50) |
 
 ```
-┌─────────────────┐     OAuth 2.0 + PKCE      ┌──────────────────┐
-│    OpenClaw      │◄─────────────────────────►│  Dexter OAuth    │
-│  (dexter-x402    │                           │  (dexter-api)    │
-│    plugin)      │                           └──────────────────┘
-└────────┬────────┘
-         │
-         │  MCP Protocol (JSON-RPC over HTTP)
-         │  - tools/list
-         │  - tools/call
-         ▼
-┌─────────────────┐     Internal      ┌──────────────────┐
-│   Dexter x402    │◄─────────────────►│  Dexter Backend  │
-│    Server       │                   │  (59+ tools)     │
-│ mcp.dexter.cash │                   │                  │
-└─────────────────┘                   └──────────────────┘
+"Search for Solana analytics APIs under $0.10"
 ```
 
-### Authentication Flow
+### x402_fetch
 
-**Primary (Desktop/CLI):**
-1. **Link Request**: Plugin creates a tracking code via `api.dexter.cash/api/openclaw/link/create`
-2. **DCR**: Plugin registers with Dexter's OAuth server using remote callback (`dexter.cash/openclaw/link/callback`)
-3. **PKCE Authorization**: Browser-based OAuth with S256 code challenge
-4. **Remote Callback**: OAuth redirects to `dexter.cash`, backend stores tokens
-5. **Poll Completion**: Plugin polls for tokens, retrieves them when ready
-6. **Automatic Refresh**: Tokens refreshed automatically before expiry
+Call any x402-protected endpoint with automatic payment. This is the recommended tool for making paid API calls — the agent gets the response directly along with a payment receipt.
 
-**Fallback (Telegram/Remote):**
-1. **Device Code**: Plugin creates link code, displays to user
-2. **Manual Auth**: User visits `dexter.cash/openclaw/link?code=XXXX`, signs in
-3. **Poll Completion**: Plugin polls until user completes auth
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | Yes | The x402 resource URL |
+| `method` | string | No | HTTP method (default `GET`) |
+| `body` | string | No | JSON body for POST/PUT requests |
 
-### MCP Integration
-
-The plugin uses the official `@modelcontextprotocol/sdk` to:
-
-1. Establish `StreamableHTTPClientTransport` connection to `mcp.dexter.cash/mcp`
-2. Send `tools/list` JSON-RPC requests to discover available tools
-3. Execute `tools/call` JSON-RPC requests for tool invocation
-4. Handle response content (text, JSON, images)
-
-## Configuration
-
-Full configuration in `~/.openclaw/openclaw.json`:
-
-```json
-{
-  "plugins": {
-    "dexter-x402": {
-      "svmPrivateKey": "base58_solana_private_key",
-      "evmPrivateKey": "0x_hex_evm_private_key",
-      "defaultNetwork": "solana",
-      "maxPaymentUSDC": "0.50",
-      "baseUrl": "https://mcp.dexter.cash/mcp",
-      "directoryUrl": "https://api.dexter.cash/api/x402/directory",
-      "autoRefreshTools": true,
-      "disableTelemetry": false
-    }
-  }
-}
 ```
-
-### Config Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `svmPrivateKey` | string | - | Solana private key (base58) for x402 payments |
-| `evmPrivateKey` | string | - | EVM private key (hex) for Base/Polygon/etc payments |
-| `defaultNetwork` | string | `"solana"` | Preferred network: solana, base, polygon, arbitrum, optimism, avalanche |
-| `maxPaymentUSDC` | string | `"0.50"` | Maximum payment per request (e.g., "0.50" = $0.50) |
-| `baseUrl` | string | `https://mcp.dexter.cash/mcp` | Dexter MCP server (for authenticated tools) |
-| `directoryUrl` | string | `https://x402.dexter.cash/api/x402/directory` | x402 directory API |
-| `autoRefreshTools` | boolean | `true` | Refresh Dexter tool list on connection |
-| `disableTelemetry` | boolean | `false` | Disable anonymous usage telemetry |
-
-## Tools Reference
-
-### x402_pay (Generic Payments)
-
-Call ANY x402-enabled paid API with automatic USDC payment. No authentication required - just configure wallet keys.
-
-**Supported Networks:** Solana, Base, Polygon, Arbitrum, Optimism, Avalanche
-
-**Parameters:**
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `url` | string | Yes | The x402-enabled endpoint URL |
-| `method` | string | No | HTTP method (default: GET) |
-| `params` | object | No | Query params (GET) or JSON body (POST) |
-| `headers` | object | No | Custom HTTP headers |
-
-**Example:**
-```bash
-openclaw agent -m "Use x402_pay to call https://x402.dexter.cash/api/onchain/activity/overview with params {\"entityId\": \"SOL\"}"
+"Use x402_fetch to call https://x402.dexter.cash/api/tools/solscan/trending"
 ```
 
 **How it works:**
-1. Makes request to the URL
-2. If 402 returned, SDK automatically signs USDC payment
-3. Retries request with payment proof
-4. Returns response data
 
-### x402_search (Directory Search)
+1. Sends the request to the URL
+2. Receives `402 Payment Required` with payment terms
+3. Signs a USDC payment matching the requested amount and chain
+4. Retries with the payment proof header
+5. Returns the API response and spend receipt
 
-Search the aggregated directory of x402-enabled paid APIs. Combines Dexter's catalog with external sources.
+### x402_pay
 
-**Parameters:**
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `query` | string | No | Search term (searches url, description) |
-| `network` | string | No | Filter: solana, base, polygon, arbitrum, optimism, avalanche |
-| `verified` | boolean | No | Only show verified endpoints |
-| `limit` | number | No | Max results (default: 10, max: 50) |
+Lower-level version of `x402_fetch` with full control over request construction.
 
-**Example:**
-```bash
-openclaw agent -m "Use x402_search to find Solana analytics APIs"
-```
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | Yes | The x402 endpoint URL |
+| `method` | string | No | HTTP method (default `GET`) |
+| `params` | object | No | Query params (GET) or JSON body (POST) |
+| `headers` | object | No | Custom HTTP headers |
 
-**Response includes:**
-- Endpoint URL and method
-- Network and pricing
-- Description and verification status
-- Success rate (when available)
+Use `x402_fetch` for most calls. Use `x402_pay` when you need custom headers, query parameters on GET requests, or non-JSON payloads.
 
-### x402_fetch (Auto-Pay)
+### x402_check
 
-Call any x402 endpoint with automatic payment from your configured wallet.
+Probe an endpoint for payment requirements without paying. Returns pricing per chain, accepted networks, pay-to addresses, and the x402 protocol version.
 
-```
-"Use x402_fetch to call https://x402.dexter.cash/api/jupiter/quote"
-```
-
-| Parameter | Type   | Description                    |
-|-----------|--------|--------------------------------|
-| url       | string | The x402 resource URL to call  |
-| method    | string | HTTP method (default: GET)     |
-| body      | string | JSON request body for POST/PUT |
-
-### x402_check (Pricing Preview)
-
-Probe an endpoint to see payment requirements per chain without paying.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | Yes | The URL to check |
+| `method` | string | No | HTTP method to probe (default `GET`) |
 
 ```
 "Use x402_check to see what https://x402.dexter.cash/api/jupiter/quote costs"
 ```
 
-| Parameter | Type   | Description                         |
-|-----------|--------|-------------------------------------|
-| url       | string | The URL to check                    |
-| method    | string | HTTP method to probe with (GET)     |
+Returns `requiresPayment: false` for free endpoints, or a list of `paymentOptions` with per-chain pricing.
 
-### x402_wallet (Wallet Info)
+### x402_wallet
 
-Show configured wallet info and balances.
+Show which wallets are configured, the default network, and the per-call spending limit.
+
+No parameters. Returns configured wallet types, active network, and `maxPaymentUsdc`.
+
+## Configuration
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `svmPrivateKey` | string | — | Solana private key (base58) for Solana payments |
+| `evmPrivateKey` | string | — | EVM private key (hex, `0x`-prefixed) for Base/Polygon/Arbitrum/Optimism/Avalanche |
+| `defaultNetwork` | string | `"solana"` | Preferred payment network |
+| `maxPaymentUSDC` | string | `"0.50"` | Maximum USDC per request (e.g. `"1.00"` = $1) |
+| `marketplaceUrl` | string | Dexter API | Override marketplace search endpoint |
+| `directoryUrl` | string | Dexter API | Override x402 directory endpoint |
+| `disableTelemetry` | boolean | `false` | Disable anonymous usage telemetry |
+
+## Supported Networks
+
+| Network | Chain ID (CAIP-2) | Asset |
+|---------|-------------------|-------|
+| Solana | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | USDC (SPL) |
+| Base | `eip155:8453` | USDC (ERC-20) |
+| Polygon | `eip155:137` | USDC (ERC-20) |
+| Arbitrum | `eip155:42161` | USDC (ERC-20) |
+| Optimism | `eip155:10` | USDC (ERC-20) |
+| Avalanche | `eip155:43114` | USDC (ERC-20) |
+
+Solana requires `svmPrivateKey`. All EVM chains share `evmPrivateKey`.
+
+## Architecture
 
 ```
-"Use x402_wallet to check my balance"
+┌───────────────┐         ┌──────────────────────┐
+│   OpenClaw    │         │  x402-enabled APIs   │
+│   Agent       │────────►│  (5,000+ endpoints)  │
+│               │  fetch  │                      │
+└───────┬───────┘         └──────────┬───────────┘
+        │                            │
+        │  402 Payment Required      │  200 OK + data
+        │◄───────────────────────────│
+        │                            │
+        │  USDC payment signature    │
+        │───────────────────────────►│
+        │                            │
+        ▼                            ▼
+┌───────────────┐         ┌──────────────────────┐
+│  @dexterai/   │         │  Dexter Marketplace  │
+│  x402 SDK     │         │  dexter.cash         │
+│  (payment     │         │  (search, rankings,  │
+│   signing)    │         │   verification)      │
+└───────────────┘         └──────────────────────┘
 ```
 
-### dexter_x402 (Authenticated Dexter Tools)
+The plugin uses [`@dexterai/x402`](https://www.npmjs.com/package/@dexterai/x402) to sign USDC payments client-side. No funds are custodied — the wallet keys stay local and payments are signed on-device.
 
-## How It Works
+## Troubleshooting
 
-### The `dexter_x402` Gateway
+### "No wallet configured"
 
-Rather than registering 59+ individual tools (which would overwhelm the agent's context), this plugin exposes a single `dexter_x402` gateway with two actions:
+Set at least one key in plugin config:
 
-```typescript
+```json
 {
-  action: "list" | "call",
-  tool?: string,      // Tool name (required for "call")
-  args?: string       // JSON arguments for the tool
-}
-```
-
-**List tools:**
-```json
-{ "action": "list" }
-```
-
-**Call a tool:**
-```json
-{ 
-  "action": "call", 
-  "tool": "solscan_trending_tokens",
-  "args": "{\"limit\": 10}"
-}
-```
-
-### Credential Storage
-
-OAuth credentials are stored in:
-```
-~/.openclaw/auth-profiles.json
-# or legacy location:
-~/.clawdbot/agents/main/agent/auth-profiles.json
-```
-
-Format:
-```json
-{
-  "version": 1,
-  "profiles": {
-    "dexter-x402:default": {
-      "type": "oauth",
-      "provider": "dexter-x402",
-      "access": "eyJ...",
-      "refresh": "...",
-      "expires": 1769639417118,
-      "baseUrl": "https://mcp.dexter.cash/mcp"
+  "plugins": {
+    "clawdexter": {
+      "svmPrivateKey": "your_solana_key"
     }
   }
 }
 ```
 
-## Troubleshooting
+### Payment rejected (amount_exceeds_max)
 
-### "Not connected to Dexter"
+The endpoint costs more than your `maxPaymentUSDC` limit. Increase it:
 
-The tool couldn't find valid credentials. Run:
-```bash
-openclaw models auth login --provider dexter-x402
+```json
+{
+  "maxPaymentUSDC": "1.00"
+}
 ```
 
-### OAuth on Telegram or remote server
+### Insufficient balance
 
-The plugin automatically uses device code flow for Telegram and remote environments:
-
-1. Plugin displays a link code (e.g., `ABC12345`)
-2. Visit `dexter.cash/openclaw/link?code=ABC12345` in any browser
-3. Sign in to Dexter and click "Connect"
-4. Return to OpenClaw - it will detect the auth automatically
-
-No localhost or port forwarding needed.
-
-### Token expired
-
-Tokens auto-refresh. If refresh fails, re-authenticate:
-```bash
-openclaw models auth login --provider dexter-x402
-```
-
-### MCP connection errors
-
-Check that `mcp.dexter.cash` is accessible:
-```bash
-curl https://mcp.dexter.cash/mcp/health
-```
+Fund your wallet with USDC on the appropriate network. Solana wallets need SPL USDC, EVM wallets need ERC-20 USDC on the target chain.
 
 ### Tools not appearing
 
-Ensure the plugin is enabled:
-```bash
-cat ~/.openclaw/openclaw.json | jq '.plugins'
-```
-
-## Development
-
-### Building
+Verify the plugin is enabled:
 
 ```bash
-cd /path/to/openclaw-research
-pnpm build
-```
-
-### Testing OAuth Flow
-
-```bash
-./openclaw.mjs models auth login --provider dexter-x402
-```
-
-### Testing Tool Execution
-
-```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-./openclaw.mjs agent --local --session-id test -m "Use dexter_x402 with action='list'"
+openclaw plugins list
 ```
 
 ## Dependencies
 
-- `@modelcontextprotocol/sdk` - Official MCP client SDK
-- `@sinclair/typebox` - Runtime type validation
+| Package | Purpose |
+|---------|---------|
+| [`@dexterai/x402`](https://www.npmjs.com/package/@dexterai/x402) | x402 payment signing (client SDK) |
+| [`@sinclair/typebox`](https://github.com/sinclairzx81/typebox) | Runtime type validation for tool schemas |
 
 ## Links
 
-- [Dexter](https://dexter.cash) - Main website
-- [Dexter x402](https://mcp.dexter.cash) - MCP server
-- [MCP Specification](https://modelcontextprotocol.io) - Protocol documentation
-- [Discord](https://discord.gg/dexter) - Community support
+- [OpenDexter Marketplace](https://dexter.cash/opendexter) — Browse and discover paid APIs
+- [x402 Protocol](https://www.x402.org) — Protocol specification
+- [Dexter](https://dexter.cash) — Dexter AI platform
+- [OpenClaw](https://github.com/openclaw/openclaw) — AI agent framework
+- [@dexterai/x402 SDK](https://www.npmjs.com/package/@dexterai/x402) — Seller SDK for publishing x402 endpoints
+- [@dexterai/opendexter](https://www.npmjs.com/package/@dexterai/opendexter) — Standalone MCP server with session wallets
+- [Discord](https://discord.gg/dexter) — Community support
 
 ## License
 

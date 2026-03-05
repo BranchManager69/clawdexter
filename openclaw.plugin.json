@@ -1,7 +1,7 @@
 {
   "id": "clawdexter",
   "name": "ClawDexter",
-  "description": "x402 payments + Dexter DeFi tools. Generic x402_pay/x402_search for ANY paid API (config-based), plus 59+ authenticated Dexter MCP tools.",
+  "description": "x402 payments + marketplace for OpenClaw agents. Search 5,000+ paid APIs, price-check endpoints, and auto-pay with USDC across Solana, Base, and 4 more chains.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
@@ -25,20 +25,14 @@
         "default": "0.50",
         "description": "Maximum payment per request in USDC (e.g., '0.50' = $0.50)"
       },
-      "baseUrl": {
+      "marketplaceUrl": {
         "type": "string",
-        "default": "https://mcp.dexter.cash/mcp",
-        "description": "Dexter MCP server URL for authenticated tools"
+        "description": "Override marketplace search endpoint URL"
       },
       "directoryUrl": {
         "type": "string",
         "default": "https://x402.dexter.cash/api/x402/directory",
         "description": "x402 directory API for discovering paid endpoints"
-      },
-      "autoRefreshTools": {
-        "type": "boolean",
-        "default": true,
-        "description": "Automatically refresh Dexter tool list on session start"
       },
       "disableTelemetry": {
         "type": "boolean",
@@ -62,15 +56,10 @@
       "label": "Max Payment (USDC)",
       "help": "Maximum amount to pay per API request"
     },
-    "baseUrl": {
-      "label": "MCP Server URL",
-      "advanced": true,
-      "help": "For authenticated Dexter tools. Default: https://mcp.dexter.cash/mcp"
-    },
     "directoryUrl": {
       "label": "Directory API URL",
       "advanced": true,
-      "help": "x402 endpoint discovery. Default: https://api.dexter.cash/api/x402/directory"
+      "help": "x402 endpoint discovery. Default: https://x402.dexter.cash/api/x402/directory"
     }
   }
 }

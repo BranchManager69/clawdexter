@@ -178,7 +178,7 @@ Solana requires `svmPrivateKey`. All EVM chains share `evmPrivateKey`.
 ```
 ┌───────────────┐         ┌──────────────────────┐
 │   OpenClaw    │         │  x402-enabled APIs   │
-│   Agent       │────────►│  (5,000+ endpoints)  │
+│   Agent       │────────►│  (OpenDexter market) │
 │               │  fetch  │                      │
 └───────┬───────┘         └──────────┬───────────┘
         │                            │

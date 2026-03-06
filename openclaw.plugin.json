@@ -1,7 +1,7 @@
 {
   "id": "clawdexter",
   "name": "ClawDexter",
-  "description": "x402 payments + marketplace for OpenClaw agents. Search 5,000+ paid APIs, price-check endpoints, and auto-pay with USDC across Solana, Base, and 4 more chains.",
+  "description": "x402 payments + marketplace for OpenClaw agents. Search the OpenDexter marketplace, price-check endpoints, and auto-pay with USDC across Solana, Base, and 4 more chains.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,

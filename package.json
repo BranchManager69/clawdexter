@@ -1,8 +1,8 @@
 {
   "name": "@dexterai/clawdexter",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "type": "module",
-  "description": "x402 payments + marketplace for OpenClaw agents. Search 5,000+ paid APIs, price-check endpoints, and auto-pay with USDC across Solana, Base, and 4 more chains.",
+  "description": "x402 payments + marketplace for OpenClaw agents. Search the OpenDexter marketplace, price-check endpoints, and auto-pay with USDC across Solana, Base, and 4 more chains.",
   "keywords": [
     "clawdexter",
     "openclaw",

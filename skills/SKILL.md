@@ -1,6 +1,6 @@
 ---
 name: clawdexter
-description: "Use ClawDexter for x402 paid API access inside OpenClaw. Search 5,000+ paid APIs on the Dexter marketplace, preview endpoint pricing, and call any x402 endpoint with automatic USDC payment across Solana, Base, Polygon, Arbitrum, Optimism, and Avalanche. Trigger whenever the user wants to find paid APIs, call an x402 endpoint, check pricing, see wallet info, or make any USDC-paid API call."
+description: "Use ClawDexter for x402 paid API access inside OpenClaw. Search paid APIs on the OpenDexter marketplace, preview endpoint pricing, and call any x402 endpoint with automatic USDC payment across Solana, Base, Polygon, Arbitrum, Optimism, and Avalanche. Trigger whenever the user wants to find paid APIs, call an x402 endpoint, check pricing, see wallet info, or make any USDC-paid API call."
 ---
 
 # ClawDexter — x402 Plugin for OpenClaw

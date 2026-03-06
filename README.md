@@ -5,8 +5,8 @@
 <h1 align="center">@dexterai/clawdexter</h1>
 
 <p align="center">
-  <strong>x402 payments and marketplace for <a href="https://github.com/openclaw/openclaw">OpenClaw</a> agents.</strong><br>
-  Search 5,000+ paid APIs, preview pricing, and auto-pay with USDC across 6 chains.
+  <strong>x402 payments and discovery for <a href="https://github.com/openclaw/openclaw">OpenClaw</a> agents.</strong><br>
+  Search the OpenDexter working set, preview pricing, and auto-pay with local wallet keys.
 </p>
 
 <p align="center">
@@ -22,11 +22,25 @@
 
 ---
 
+## What is Clawdexter?
+
+Clawdexter is an **OpenClaw plugin**, not a hosted Claude MCP server.
+
+It brings the OpenDexter x402 workflow into OpenClaw with five tools:
+
+- `x402_search`
+- `x402_check`
+- `x402_fetch`
+- `x402_pay`
+- `x402_wallet`
+
+Use it when you want OpenClaw agents to discover and pay for x402 resources with locally configured wallet keys.
+
 ## What is x402?
 
 [x402](https://www.x402.org) is an open protocol for HTTP-native micropayments. When a server returns **402 Payment Required**, the client signs a USDC payment and retries — the server verifies and serves the response. No API keys, no subscriptions, no invoices.
 
-ClawDexter brings x402 to every OpenClaw agent. It ships 5 tools that let agents discover paid APIs, check prices, pay automatically, and track spending — all with a single wallet configuration.
+ClawDexter brings x402 to every OpenClaw agent. It ships five tools that let agents discover paid APIs, check prices, pay automatically, and track spending — all with a single OpenClaw wallet configuration.
 
 ## Install
 
@@ -56,7 +70,7 @@ You can configure one wallet or both. Solana keys are base58-encoded, EVM keys a
 
 ### x402_search
 
-Search the Dexter marketplace for x402-enabled paid APIs. Returns quality-ranked results with pricing, verification status, seller reputation, and settlement volume.
+Search the OpenDexter marketplace for x402-enabled paid APIs. Returns quality-ranked results with pricing, verification status, seller reputation, and settlement volume.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -96,7 +110,13 @@ Call any x402-protected endpoint with automatic payment. This is the recommended
 
 ### x402_pay
 
-Lower-level version of `x402_fetch` with full control over request construction.
+Explicit payment-oriented version of the same x402 flow.
+
+Use `x402_pay` when you want the calling pattern to be framed as:
+
+1. search
+2. check
+3. pay and call
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -124,7 +144,7 @@ Returns `requiresPayment: false` for free endpoints, or a list of `paymentOption
 
 ### x402_wallet
 
-Show which wallets are configured, the default network, and the per-call spending limit.
+Show which local wallets are configured, the default network, and the per-call spending limit.
 
 No parameters. Returns configured wallet types, active network, and `maxPaymentUsdc`.
 
